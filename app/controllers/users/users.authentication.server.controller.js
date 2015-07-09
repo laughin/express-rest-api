@@ -5,10 +5,32 @@
  */
 var _ = require('lodash'),
   errorHandler = require('../errors.server.controller'),
+  config = require('../../../config/config'),
   mongoose = require('mongoose'),
   passport = require('passport'),
+  jwt = require('jsonwebtoken'),
   User = mongoose.model('User');
 
+
+/**
+ * 获取认证Token
+ */
+exports.authenticate = function(req, res, next) {
+  passport.authenticate('local', function(err, user, info) {
+    if (err || !user) {
+      res.status(400).send(info);
+    } else {
+      var token = jwt.sign(user, config.secret, {
+        expiresInMinutes: 1440 // expires in 24 hours
+      });
+      res.json({
+        success: true,
+        message: 'Enjoy your token!',
+        token: token
+      });
+    }
+  })(req, res, next);
+};
 
 /**
  * 注册
@@ -30,9 +52,15 @@ exports.signup = function(req, res) {
 
       req.login(user, function(err) {
         if (err) {
-          res.status(400).send(err);
+          res.json({
+            success: false,
+            message: err
+          });
         } else {
-          res.json(user);
+          res.json({
+            success: true,
+            user: user
+          });
         }
       });
     }
@@ -53,9 +81,15 @@ exports.signin = function(req, res, next) {
 
       req.login(user, function(err) {
         if (err) {
-          res.status(400).send(err);
+          res.json({
+            success: false,
+            message: err
+          });
         } else {
-          res.json(user);
+          res.json({
+            success: true,
+            user: user
+          });
         }
       });
     }
@@ -74,16 +108,24 @@ exports.login = function(req, res, next) {
       user.password = undefined;
       user.salt = undefined;
 
-      if(user.roles[0] === 'admin') {
+      if (user.roles[0] === 'admin') {
         req.login(user, function(err) {
           if (err) {
-            res.status(400).send(err);
-          } else {
-            res.json(user);
-          }
+          res.json({
+            success: false,
+            message: err
+          });
+        } else {
+          res.json({
+            success: true,
+            user: user
+          });
+        }
         });
       } else {
-        res.status(400).send({'message': '只有管理员权限才可以登录'});
+        res.status(400).send({
+          'message': '只有管理员权限才可以登录'
+        });
       }
 
     }

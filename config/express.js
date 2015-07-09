@@ -18,7 +18,8 @@ var fs = require('fs'),
   }),
   config = require('./config'),
   consolidate = require('consolidate'),
-  path = require('path');
+  path = require('path'),
+  jwt = require('jsonwebtoken');
 
 module.exports = function(db) {
   // Initialize express app
@@ -78,6 +79,41 @@ module.exports = function(db) {
   // use passport session
   app.use(passport.initialize());
   app.use(passport.session());
+
+  //check token
+  app.use(function(req, res, next) {
+
+    // check header or url parameters or post parameters for token
+    var token = req.body.token || req.query.token || req.headers['x-access-token'];
+
+    if (req.url === '/api/auth/authenticate') {
+      /* token is not needed when authenticating */
+      next();
+    } else if (token) {
+      // decode token
+      // verifies secret and checks exp
+      jwt.verify(token, config.secret, function(err, decoded) {
+        if (err) {
+          return res.json({
+            success: false,
+            message: 'Failed to authenticate token.'
+          });
+        } else {
+          // if everything is good, save to request for use in other routes
+          req.decoded = decoded;
+          next();
+        }
+      });
+
+    } else {
+      return res.status(403).send({
+        success: false,
+        message: 'No token provided.'
+      });
+
+    }
+
+  });
 
   // Globbing routing files
   config.getGlobbedFiles('./app/routes/**/*.js').forEach(function(routePath) {

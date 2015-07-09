@@ -39,7 +39,10 @@ exports.create = function(req, res) {
             message: errorHandler.getErrorMessage(err)
           });
         } else {
-          res.json(user);
+          res.json({
+            success: true,
+            user: user
+          });
         }
       });
     } else {
@@ -63,7 +66,10 @@ exports.delete = function(req, res) {
         message: errorHandler.getErrorMessage(err)
       });
     } else {
-      res.json(user);
+      res.json({
+        success: true,
+        user: user
+      });
     }
   });
 };
@@ -80,7 +86,10 @@ exports.findOne = function(req, res) {
         message: errorHandler.getErrorMessage(err)
       });
     } else {
-      res.json(user);
+      res.json({
+        success: true,
+        user: user
+      });
     }
   });
 };
@@ -108,7 +117,10 @@ exports.update = function(req, res) {
               'error': 'An error has occurred - ' + err
             });
           } else {
-            res.json(user);
+            res.json({
+              success: true,
+              user: user
+            });
           }
         });
       }

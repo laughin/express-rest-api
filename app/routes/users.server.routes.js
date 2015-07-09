@@ -19,6 +19,7 @@ module.exports = function(app) {
   app.route(config.app.restApiRoot + '/auth/signin').post(users.signin);
   app.route(config.app.restApiRoot + '/auth/signout').get(users.signout);
   app.route(config.app.restApiRoot + '/auth/login').post(users.login);
+  app.route(config.app.restApiRoot + '/auth/authenticate').post(users.authenticate);
 
   // Finish by binding the user middleware
   app.param('userID', users.userByID);
