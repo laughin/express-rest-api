@@ -19,7 +19,7 @@ var fs = require('fs'),
   config = require('./config'),
   consolidate = require('consolidate'),
   path = require('path'),
-  jwt = require('jsonwebtoken');
+  jwt = require('jwt-simple');
 
 module.exports = function(db) {
   // Initialize express app
@@ -80,31 +80,34 @@ module.exports = function(db) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  //check token
+  //check token middleware
   app.use(function(req, res, next) {
-
     // check header or url parameters or post parameters for token
-    var token = req.body.token || req.query.token || req.headers['x-access-token'];
+    var token = req.body.token || req.query.token || req.headers['x-access-token'] || req.headers['authorization'];
 
-    if (req.url === '/api/auth/authenticate') {
-      /* token is not needed when authenticating */
+    if (req.url === '/api/auth/authenticate' || req.url === '/api/auth/login') {
       next();
     } else if (token) {
       // decode token
       // verifies secret and checks exp
-      jwt.verify(token, config.secret, function(err, decoded) {
-        if (err) {
+      try {
+        var decoded = jwt.decode(token, config.secret);
+
+        if (decoded.exp <= Date.now()) {
           return res.json({
             success: false,
-            message: 'Failed to authenticate token.'
+            message: 'Access token has expired.'
           });
-        } else {
-          // if everything is good, save to request for use in other routes
-          req.decoded = decoded;
-          next();
         }
-      });
+        req.decoded = decoded;
+        next();
 
+      } catch (err) {
+        return res.json({
+          success: false,
+          message: 'Failed to authenticate token.'
+        });
+      }
     } else {
       return res.status(403).send({
         success: false,
@@ -112,7 +115,6 @@ module.exports = function(db) {
       });
 
     }
-
   });
 
   // Globbing routing files

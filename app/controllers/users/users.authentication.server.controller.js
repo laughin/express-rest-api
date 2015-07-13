@@ -8,7 +8,8 @@ var _ = require('lodash'),
   config = require('../../../config/config'),
   mongoose = require('mongoose'),
   passport = require('passport'),
-  jwt = require('jsonwebtoken'),
+  moment = require('moment'),
+  jwt = require('jwt-simple'),
   User = mongoose.model('User');
 
 
@@ -19,14 +20,36 @@ exports.authenticate = function(req, res, next) {
   passport.authenticate('local', function(err, user, info) {
     if (err || !user) {
       res.status(400).send(info);
-    } else {
-      var token = jwt.sign(user, config.secret, {
-        expiresInMinutes: 1440 // expires in 24 hours
-      });
       res.json({
-        success: true,
-        message: 'Enjoy your token!',
-        token: token
+        success: false,
+        message: info
+      });
+    } else {
+      // Remove sensitive data before login
+      user.password = undefined;
+      user.salt = undefined;
+
+      req.login(user, function(err) {
+        if (err) {
+          res.json({
+            success: false,
+            message: err
+          });
+        } else {
+
+          var expires = moment().add('days', 7).valueOf();
+          var token = jwt.encode({
+            iss: user,
+            exp: expires
+          }, config.secret);
+
+          res.json({
+            success: true,
+            message: 'Enjoy your token!',
+            expires: expires,
+            token: token
+          });
+        }
       });
     }
   })(req, res, next);
@@ -111,16 +134,27 @@ exports.login = function(req, res, next) {
       if (user.roles[0] === 'admin') {
         req.login(user, function(err) {
           if (err) {
-          res.json({
-            success: false,
-            message: err
-          });
-        } else {
-          res.json({
-            success: true,
-            user: user
-          });
-        }
+            res.json({
+              success: false,
+              message: err
+            });
+          } else {
+
+            var expires = moment().add('days', 7).valueOf();
+            var token = jwt.encode({
+              iss: user,
+              exp: expires
+            }, config.secret);
+
+            res.json({
+              success: true,
+              message: 'Enjoy your token!',
+              expires: expires,
+              token: token
+            });
+
+          }
+
         });
       } else {
         res.status(400).send({
